@@ -1,0 +1,90 @@
+
+version: '3.8'
+
+services:
+  api-gateway:
+    build: ./services/api-gateway
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./services/api-gateway:/app
+    depends_on:
+      - auth-service
+      - core-banking-service
+      - investment-service
+      - ai-financial-advisor-service
+
+  auth-service:
+    build: ./services/auth-service
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./services/auth-service:/app
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/auth_db
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+
+  core-banking-service:
+    build: ./services/core-banking-service
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./services/core-banking-service:/app
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/banking_db
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+
+  investment-service:
+    build: ./services/investment-service
+    ports:
+      - "8003:8003"
+    volumes:
+      - ./services/investment-service:/app
+    environment:
+      - IBM_QUANTUM_API_KEY=${IBM_QUANTUM_API_KEY}
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+
+  ai-financial-advisor-service:
+    build: ./services/ai-financial-advisor-service
+    ports:
+      - "8004:8004"
+    volumes:
+      - ./services/ai-financial-advisor-service:/app
+    depends_on:
+      - redis
+
+  frontend-app:
+    build: ./frontend-app
+    ports:
+      - "3000:80"
+    volumes:
+      - ./frontend-app:/app
+    depends_on:
+      - api-gateway
+
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: auth_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:
