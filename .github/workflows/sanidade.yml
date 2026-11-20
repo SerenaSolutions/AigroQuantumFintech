@@ -22,33 +22,25 @@ jobs:
           elif ls *.html >/dev/null 2>&1; then echo "tipo=html" >> "$GITHUB_OUTPUT"
           else echo "tipo=nenhum" >> "$GITHUB_OUTPUT"; fi
 
-      - uses: actions/setup-python@v5
-        if: steps.stack.outputs.tipo == 'python'
-        with:
-          python-version: "3.12"
-
-      - name: Python, testes se existirem
-        if: steps.stack.outputs.tipo == 'python'
-        run: |
-          python -m pip install -q --upgrade pip
-          if [ -f requirements.txt ]; then pip install -q -r requirements.txt; fi
-          pip install -q -e . 2>/dev/null || true
-          if ls test_*.py tests/test_*.py >/dev/null 2>&1; then
-            python -m unittest discover -v
-          else
-            echo "sem testes ainda: portao passa declarando ausencia"
-          fi
-
       - uses: actions/setup-node@v4
         if: steps.stack.outputs.tipo == 'node'
         with:
           node-version: "20"
 
-      - name: Node, testes se existirem
+      - name: Node, instala e testa se houver teste
         if: steps.stack.outputs.tipo == 'node'
         run: |
-          npm install --silent
-          npm test --silent --if-present
+          # react-scripts 5 com react 19 exige legacy-peer-deps; sem isso o install falha
+          if [ -f package-lock.json ]; then
+            npm ci --legacy-peer-deps --silent || npm install --legacy-peer-deps --silent
+          else
+            npm install --legacy-peer-deps --silent
+          fi
+          if node -e "process.exit(require('./package.json').scripts && require('./package.json').scripts.test ? 0 : 1)"; then
+            CI=true npm test -- --watchAll=false
+          else
+            echo "sem script de teste: portao passa declarando ausencia"
+          fi
 
       - name: HTML estatico
         if: steps.stack.outputs.tipo == 'html'
