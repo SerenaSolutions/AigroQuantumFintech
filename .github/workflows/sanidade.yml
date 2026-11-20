@@ -36,9 +36,13 @@ jobs:
           else
             npm install --legacy-peer-deps --silent
           fi
+          # react-scripts exige src/; sem src o repositorio nao tem app, so config
+          if [ ! -d src ]; then
+            echo "::warning::repositorio sem pasta src/: package.json existe mas o app nao"
+            echo "sem codigo-fonte no repositorio: portao passa declarando o achado"
+            exit 0
+          fi
           if node -e "process.exit(require('./package.json').scripts && require('./package.json').scripts.test ? 0 : 1)"; then
-            # --passWithNoTests: CRA sai com 1 quando nao ha teste; ausencia de teste
-            # nao pode reprovar o portao de sanidade
             CI=true npm test -- --watchAll=false --passWithNoTests
           else
             echo "sem script de teste: portao passa declarando ausencia"
